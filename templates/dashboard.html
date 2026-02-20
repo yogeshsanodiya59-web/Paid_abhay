@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard — SymptomPredict System{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+
+        <!-- Header -->
+        <div class="page-header mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h1 class="page-title"><i class="bi bi-grid-1x2 me-2 text-primary"></i>My Dashboard</h1>
+                <p class="text-muted mb-0">Hello, <strong>{{ session.get('user_name') }}</strong> — here are all your
+                    past predictions.</p>
+            </div>
+            <a href="{{ url_for('predict') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>New Prediction
+            </a>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <div class="stat-card-icon bg-primary-subtle text-primary">
+                        <i class="bi bi-clipboard2-data"></i>
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-value">{{ predictions|length }}</div>
+                        <div class="stat-card-label">Total Predictions</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <div class="stat-card-icon bg-success-subtle text-success">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-value">
+                            {% if predictions %}
+                            {{ "%.1f"|format(predictions|map(attribute='confidence')|list|sum / predictions|length) }}%
+                            {% else %}
+                            —
+                            {% endif %}
+                        </div>
+                        <div class="stat-card-label">Avg. Confidence</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <div class="stat-card-icon bg-warning-subtle text-warning">
+                        <i class="bi bi-activity"></i>
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-value">
+                            {% if predictions %}
+                            {% set ns = namespace(seen=[]) %}
+                            {% for p in predictions %}
+                            {% if p.predicted_disease not in ns.seen %}
+                            {% set ns.seen = ns.seen + [p.predicted_disease] %}
+                            {% endif %}
+                            {% endfor %}
+                            {{ ns.seen | length }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </div>
+                        <div class="stat-card-label">Unique Diseases</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card">
+                    <div class="stat-card-icon bg-info-subtle text-info">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <div class="stat-card-body">
+                        <div class="stat-card-value">
+                            {% if predictions %}
+                            {{ predictions[0].created_at.strftime('%d %b') }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </div>
+                        <div class="stat-card-label">Last Prediction</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Predictions Table -->
+        {% if predictions %}
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-semibold"><i class="bi bi-table me-2 text-primary"></i>Prediction History</h5>
+                <span class="badge bg-primary">{{ predictions|length }} records</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle" id="predictionsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">#</th>
+                                <th>Date & Time</th>
+                                <th>Age / Gender</th>
+                                <th>Symptoms</th>
+                                <th>Predicted Disease</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in predictions %}
+                            <tr>
+                                <td class="ps-4 text-muted">{{ loop.index }}</td>
+                                <td>
+                                    <div class="fw-medium">{{ p.created_at.strftime('%d %b %Y') }}</div>
+                                    <div class="text-muted small">{{ p.created_at.strftime('%I:%M %p') }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ p.age }}y</span>
+                                    <span class="badge bg-light text-dark border ms-1">{{ p.gender }}</span>
+                                </td>
+                                <td style="max-width: 220px;">
+                                    <div class="symptom-cell text-truncate" title="{{ p.symptoms }}">
+                                        {% for sym in p.symptoms.split(',')[:3] %}
+                                        <span class="badge bg-primary-subtle text-primary me-1 text-capitalize">{{
+                                            sym.strip() }}</span>
+                                        {% endfor %}
+                                        {% if p.symptoms.split(',')|length > 3 %}
+                                        <span class="text-muted small">+{{ p.symptoms.split(',')|length - 3 }}
+                                            more</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark">{{ p.predicted_disease }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="mini-bar-wrap">
+                                            <div class="mini-bar {% if p.confidence >= 80 %}bg-success{% elif p.confidence >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                style="width: {{ p.confidence }}%"></div>
+                                        </div>
+                                        <span
+                                            class="fw-semibold small {% if p.confidence >= 80 %}text-success{% elif p.confidence >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ p.confidence }}%
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Empty state -->
+        <div class="empty-state text-center py-5">
+            <div class="empty-icon mb-3">
+                <i class="bi bi-clipboard2-x"></i>
+            </div>
+            <h5 class="fw-semibold">No predictions yet</h5>
+            <p class="text-muted">You haven't made any predictions. Start by entering your symptoms.</p>
+            <a href="{{ url_for('predict') }}" class="btn btn-primary mt-2">
+                <i class="bi bi-search-heart me-2"></i>Make Your First Prediction
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

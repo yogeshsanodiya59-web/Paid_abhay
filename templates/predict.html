@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Predict Disease — SymptomPredict System{% endblock %}
+
+{% block extra_head %}
+<style>
+    .symptom-grid {
+        column-count: 2;
+        column-gap: 1rem;
+    }
+
+    @media (max-width: 576px) {
+        .symptom-grid {
+            column-count: 1;
+        }
+    }
+
+    .symptom-item {
+        break-inside: avoid;
+        margin-bottom: 0.4rem;
+    }
+
+    .symptom-item label {
+        cursor: pointer;
+    }
+
+    .symptom-item input:checked+label {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+    #symptomSearch {
+        border-radius: 8px;
+    }
+
+    .selected-count {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+
+                <!-- Page header -->
+                <div class="page-header mb-4">
+                    <h1 class="page-title"><i class="bi bi-search-heart me-2 text-primary"></i>Disease Prediction</h1>
+                    <p class="text-muted">Fill in your details and select your symptoms. Our AI will analyse the
+                        pattern.</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('predict') }}" id="predictForm">
+
+                    <!-- Patient Info -->
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div class="card-header bg-primary text-white py-3">
+                            <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Patient Information</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="age" class="form-label fw-medium">Age <span
+                                            class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-calendar3"></i></span>
+                                        <input type="number" class="form-control" id="age" name="age" min="1" max="120"
+                                            placeholder="e.g. 35" required />
+                                        <span class="input-group-text">years</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="gender" class="form-label fw-medium">Gender <span
+                                            class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-gender-ambiguous"></i></span>
+                                        <select class="form-select" id="gender" name="gender" required>
+                                            <option value="" disabled selected>Select gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Symptoms -->
+                    <div class="card shadow-sm mb-4 border-0">
+                        <div
+                            class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-clipboard2-pulse me-2"></i>Select Symptoms</h5>
+                            <span class="badge bg-white text-primary selected-count" id="selectedCount">0
+                                selected</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="symptomSearch"
+                                    placeholder="&#128269; Search symptoms..." />
+                            </div>
+
+                            <div class="symptom-grid" id="symptomGrid">
+                                {% for symptom in symptoms %}
+                                <div class="symptom-item" data-symptom="{{ symptom }}">
+                                    <div class="form-check">
+                                        <input class="form-check-input symptom-checkbox" type="checkbox" name="symptoms"
+                                            value="{{ symptom }}" id="sym_{{ loop.index }}" />
+                                        <label class="form-check-label text-capitalize" for="sym_{{ loop.index }}">
+                                            {{ symptom }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearAll">
+                                    <i class="bi bi-x-circle me-1"></i>Clear All
+                                </button>
+                                <small class="text-muted align-self-center">Select 1–7 symptoms for best results</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg fw-semibold" id="submitBtn">
+                            <i class="bi bi-cpu me-2"></i>Analyse & Predict Disease
+                        </button>
+                    </div>
+
+                    <!-- Disclaimer -->
+                    <div class="alert alert-warning mt-4 d-flex gap-2" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+                        <div>
+                            <strong>Disclaimer:</strong> This tool is for educational purposes only and does not
+                            constitute
+                            medical advice. Always consult a licensed healthcare professional for diagnosis and
+                            treatment.
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Symptom search filter
+    const searchInput = document.getElementById('symptomSearch');
+    const symptomItems = document.querySelectorAll('.symptom-item');
+    const selectedCountEl = document.getElementById('selectedCount');
+    const checkboxes = document.querySelectorAll('.symptom-checkbox');
+
+    function updateCount() {
+        const count = document.querySelectorAll('.symptom-checkbox:checked').length;
+        selectedCountEl.textContent = count + ' selected';
+        selectedCountEl.className = count > 0
+            ? 'badge bg-success text-white selected-count'
+            : 'badge bg-white text-primary selected-count';
+    }
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.toLowerCase().trim();
+        symptomItems.forEach(item => {
+            const name = item.dataset.symptom.toLowerCase();
+            item.style.display = name.includes(query) ? '' : 'none';
+        });
+    });
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+    document.getElementById('clearAll').addEventListener('click', function () {
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCount();
+    });
+
+    // Submit loading state
+    document.getElementById('predictForm').addEventListener('submit', function () {
+        const btn = document.getElementById('submitBtn');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analysing...';
+        btn.disabled = true;
+    });
+</script>
+{% endblock %}

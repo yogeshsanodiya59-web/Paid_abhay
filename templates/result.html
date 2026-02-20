@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Prediction Result — MediPredict{% endblock %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+
+                <!-- Result Card -->
+                <div class="result-card text-center mb-4">
+                    <div class="result-icon-wrap mb-3">
+                        <div class="result-pulse"></div>
+                        <i class="bi bi-activity result-icon"></i>
+                    </div>
+                    <p class="text-muted text-uppercase fw-semibold letter-spacing mb-1">Predicted Condition</p>
+                    <h1 class="result-disease">{{ prediction.disease }}</h1>
+
+                    <!-- Confidence -->
+                    <div class="confidence-section mt-4">
+                        <p class="text-muted mb-2 fw-medium">Model Confidence</p>
+                        <div class="confidence-bar-wrap">
+                            <div class="confidence-bar" id="confBar" data-value="{{ prediction.confidence }}"></div>
+                        </div>
+                        <div class="confidence-label mt-2">
+                            <span class="confidence-value">{{ prediction.confidence }}%</span>
+                            <span class="confidence-text ms-2 text-muted">
+                                {% if prediction.confidence >= 80 %}
+                                <i class="bi bi-check-circle-fill text-success"></i> High Confidence
+                                {% elif prediction.confidence >= 60 %}
+                                <i class="bi bi-dash-circle-fill text-warning"></i> Moderate Confidence
+                                {% else %}
+                                <i class="bi bi-exclamation-circle-fill text-danger"></i> Low Confidence
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Summary -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light py-3">
+                        <h6 class="mb-0 fw-semibold"><i class="bi bi-person-badge me-2 text-primary"></i>Your Input
+                            Summary</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-sm-4 text-center">
+                                <div class="summary-stat">
+                                    <i class="bi bi-calendar3 text-primary fs-4"></i>
+                                    <div class="fw-semibold mt-1">{{ prediction.age }} years</div>
+                                    <div class="text-muted small">Age</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4 text-center">
+                                <div class="summary-stat">
+                                    <i class="bi bi-gender-ambiguous text-primary fs-4"></i>
+                                    <div class="fw-semibold mt-1">{{ prediction.gender }}</div>
+                                    <div class="text-muted small">Gender</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4 text-center">
+                                <div class="summary-stat">
+                                    <i class="bi bi-clipboard2-pulse text-primary fs-4"></i>
+                                    <div class="fw-semibold mt-1">{{ prediction.symptoms.split(',')|length }}</div>
+                                    <div class="text-muted small">Symptoms</div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr />
+                        <p class="mb-1 fw-medium text-muted small text-uppercase">Symptoms Entered</p>
+                        <div class="symptom-tags">
+                            {% for sym in prediction.symptoms.split(',') %}
+                            <span class="badge bg-primary-subtle text-primary me-1 mb-1 px-2 py-1 text-capitalize">
+                                {{ sym.strip() }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggested Action -->
+                <div class="card border-0 shadow-sm mb-4 action-card">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="action-icon">
+                                <i class="bi bi-hospital"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-semibold mb-1">Suggested Action</h6>
+                                <p class="mb-0 text-muted">
+                                    Based on the predicted condition <strong>{{ prediction.disease }}</strong>,
+                                    we recommend consulting a licensed healthcare professional or specialist
+                                    for a proper clinical evaluation and diagnosis.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="alert alert-warning d-flex gap-2 mb-4" role="alert">
+                    <i class="bi bi-shield-exclamation flex-shrink-0 fs-5 mt-1"></i>
+                    <div>
+                        <strong>Medical Disclaimer:</strong> This is <u>not</u> a medical diagnosis.
+                        The prediction is generated by a machine learning model trained on synthetic data
+                        and is intended for educational purposes only. Please consult a licensed healthcare
+                        professional before making any health decisions.
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex flex-wrap gap-3 justify-content-center">
+                    <a href="{{ url_for('predict') }}" class="btn btn-primary px-4">
+                        <i class="bi bi-arrow-repeat me-2"></i>New Prediction
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary px-4">
+                        <i class="bi bi-grid-1x2 me-2"></i>View Dashboard
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Animate confidence bar on load
+    window.addEventListener('load', function () {
+        const bar = document.getElementById('confBar');
+        const value = parseFloat(bar.dataset.value);
+        setTimeout(() => {
+            bar.style.width = value + '%';
+            // Color based on confidence
+            if (value >= 80) bar.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
+            else if (value >= 60) bar.style.background = 'linear-gradient(90deg, #ffc107, #fd7e14)';
+            else bar.style.background = 'linear-gradient(90deg, #dc3545, #e83e8c)';
+        }, 300);
+    });
+</script>
+{% endblock %}
